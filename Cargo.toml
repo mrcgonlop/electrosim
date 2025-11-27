@@ -1,0 +1,69 @@
+[package]
+name = "em-physics-sandbox"
+version = "0.1.0"
+edition = "2021"
+authors = ["Your Name <you@example.com>"]
+description = "Modular electromagnetic physics simulation sandbox for testing alternative EM theories"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+# GPU rendering
+wgpu = "22.1"
+bytemuck = { version = "1.18", features = ["derive"] }
+pollster = "0.3"
+
+# Math
+glam = { version = "0.29", features = ["bytemuck"] }
+
+# UI and windowing
+egui = "0.29"
+egui-wgpu = "0.29"
+egui-winit = "0.29"
+winit = "0.30"
+
+# Image handling for visualization
+image = { version = "0.25", default-features = false, features = ["png"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Serialization (for saving/loading experiments)
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Logging
+log = "0.4"
+env_logger = "0.10"
+
+[features]
+default = ["visualization"]
+visualization = []
+
+[dev-dependencies]
+# Testing
+approx = "0.5"
+proptest = "1.4"
+
+# Benchmarking
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[profile.bench]
+inherits = "release"
+
+[[bench]]
+name = "performance"
+harness = false
+
+[lib]
+name = "em_physics_sandbox"
+path = "src/lib.rs"
+
+[[bin]]
+name = "em-sandbox"
+path = "src/main.rs"
