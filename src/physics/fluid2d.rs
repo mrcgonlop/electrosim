@@ -23,6 +23,12 @@ pub struct Fluid2D {
     /// Pressure field
     pub pressure: Vec<f32>,
 
+    /// Charge density field (C/m²) - for EM analog
+    pub charge_density: Vec<f32>,
+
+    /// Electric field (V/m) - computed from pressure gradient
+    pub e_field: Vec<Vec2>,
+
     /// Kinematic viscosity (m²/s)
     pub viscosity: f32,
 
@@ -42,6 +48,8 @@ impl Fluid2D {
             velocity: vec![Vec2::ZERO; size],
             vorticity: vec![0.0; size],
             pressure: vec![0.0; size],
+            charge_density: vec![0.0; size],
+            e_field: vec![Vec2::ZERO; size],
             viscosity,
             dt,
         }
@@ -148,6 +156,7 @@ impl Fluid2D {
     pub fn step(&mut self) {
         // 1. Advection (semi-Lagrangian)
         self.advect();
+        self.advect_charge();  // Also advect charge density
 
         // 2. Diffusion (viscosity)
         self.diffuse();
@@ -180,6 +189,27 @@ impl Fluid2D {
         self.velocity = new_velocity;
     }
 
+    /// Advect charge density with the fluid
+    fn advect_charge(&mut self) {
+        let mut new_charge = self.charge_density.clone();
+
+        for j in 1..self.ny - 1 {
+            for i in 1..self.nx - 1 {
+                let idx = self.index(i, j);
+                let pos = Vec2::new(i as f32, j as f32);
+
+                // Trace particle backward in time
+                let vel = self.velocity[idx];
+                let back_pos = pos - vel * self.dt / self.spacing;
+
+                // Bilinear interpolation of charge density
+                new_charge[idx] = self.interpolate_scalar(back_pos, &self.charge_density);
+            }
+        }
+
+        self.charge_density = new_charge;
+    }
+
     /// Interpolate velocity at arbitrary position using bilinear interpolation
     fn interpolate_velocity(&self, pos: Vec2) -> Vec2 {
         let i = pos.x.floor().max(0.0).min(self.nx as f32 - 2.0) as usize;
@@ -202,6 +232,30 @@ impl Fluid2D {
         let v0 = v00.lerp(v10, fx);
         let v1 = v01.lerp(v11, fx);
         v0.lerp(v1, fy)
+    }
+
+    /// Interpolate scalar field at arbitrary position using bilinear interpolation
+    fn interpolate_scalar(&self, pos: Vec2, field: &[f32]) -> f32 {
+        let i = pos.x.floor().max(0.0).min(self.nx as f32 - 2.0) as usize;
+        let j = pos.y.floor().max(0.0).min(self.ny as f32 - 2.0) as usize;
+
+        let fx = pos.x - i as f32;
+        let fy = pos.y - j as f32;
+
+        let idx00 = self.index(i, j);
+        let idx10 = self.index(i + 1, j);
+        let idx01 = self.index(i, j + 1);
+        let idx11 = self.index(i + 1, j + 1);
+
+        // Bilinear interpolation
+        let s00 = field[idx00];
+        let s10 = field[idx10];
+        let s01 = field[idx01];
+        let s11 = field[idx11];
+
+        let s0 = s00 * (1.0 - fx) + s10 * fx;
+        let s1 = s01 * (1.0 - fx) + s11 * fx;
+        s0 * (1.0 - fy) + s1 * fy
     }
 
     /// Diffusion step (viscosity)
@@ -331,6 +385,80 @@ impl Fluid2D {
             .iter()
             .map(|&w| 0.5 * w * w * cell_volume)
             .sum()
+    }
+
+    /// Add uniform charge density in a circular region (for Faraday disk)
+    pub fn add_charge_in_disk(&mut self, center: Vec2, radius: f32, charge_density: f32) {
+        for j in 0..self.ny {
+            for i in 0..self.nx {
+                let pos = Vec2::new(i as f32 * self.spacing, j as f32 * self.spacing);
+                let r = (pos - center).length();
+
+                if r < radius {
+                    let idx = self.index(i, j);
+                    self.charge_density[idx] = charge_density;
+                }
+            }
+        }
+    }
+
+    /// Compute electric field from pressure gradient
+    /// In Martins' theory: E ∝ -∇p (pressure gradient drives electric field)
+    pub fn compute_e_field_from_pressure(&mut self, coupling_constant: f32) {
+        let dx_inv = 1.0 / self.spacing;
+
+        for j in 1..self.ny - 1 {
+            for i in 1..self.nx - 1 {
+                let idx = self.index(i, j);
+                let idx_xp = self.index(i + 1, j);
+                let idx_xm = self.index(i - 1, j);
+                let idx_yp = self.index(i, j + 1);
+                let idx_ym = self.index(i, j - 1);
+
+                // E = -k * ∇p (negative pressure gradient)
+                let grad_p = Vec2::new(
+                    (self.pressure[idx_xp] - self.pressure[idx_xm]) * 0.5 * dx_inv,
+                    (self.pressure[idx_yp] - self.pressure[idx_ym]) * 0.5 * dx_inv,
+                );
+
+                self.e_field[idx] = -coupling_constant * grad_p;
+            }
+        }
+    }
+
+    /// Get radial electric field at a given radius from center
+    pub fn radial_e_field(&self, center: Vec2, radius: f32) -> f32 {
+        let mut e_radial_sum = 0.0;
+        let mut count = 0;
+
+        for j in 0..self.ny {
+            for i in 0..self.nx {
+                let pos = Vec2::new(i as f32 * self.spacing, j as f32 * self.spacing);
+                let r_vec = pos - center;
+                let r = r_vec.length();
+
+                // Sample points near the desired radius
+                if (r - radius).abs() < self.spacing * 0.5 {
+                    let idx = self.index(i, j);
+                    let radial_dir = r_vec.normalize_or_zero();
+                    let e_radial = self.e_field[idx].dot(radial_dir);
+
+                    e_radial_sum += e_radial;
+                    count += 1;
+                }
+            }
+        }
+
+        if count > 0 {
+            e_radial_sum / count as f32
+        } else {
+            0.0
+        }
+    }
+
+    /// Get maximum E-field magnitude
+    pub fn max_e_field(&self) -> f32 {
+        self.e_field.iter().map(|e| e.length()).fold(0.0, f32::max)
     }
 }
 
