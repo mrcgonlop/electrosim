@@ -14,7 +14,11 @@
       "Bash(where:*)",
       "Bash(cargo build:*)",
       "Bash(cargo doc:*)",
-      "Bash(cargo search:*)"
+      "Bash(cargo search:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(timeout:*)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []

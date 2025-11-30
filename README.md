@@ -74,6 +74,7 @@ All examples generate videos in `output/` directory.
 
 | Physics Theory | Module | Paradigm | Key Demo |
 |----------------|--------|----------|----------|
+| **🔷 Pure Hypergraphs** | `hypergraph.rs` | **Most fundamental** | **Dimensional emergence** |
 | **General Relativity (2+1D)** | `curved_spacetime.rs` | Emergent geometry | Gravitational lensing |
 | **Newtonian Gravity** | Particle dynamics | Action-at-a-distance | Three-body chaos |
 | **Weber Electrodynamics** | `weber_particles.rs` | Velocity-dependent forces | Charged three-body |
@@ -82,9 +83,31 @@ All examples generate videos in `output/` directory.
 | **Maxwell FDTD** | `maxwell.rs` | Field theory on lattice | Dipole EM radiation |
 | **Scalar Waves** | `wave2d.rs` | Wave equation | Interference patterns |
 
+**🔷 New**: Pure hypergraph physics - the most fundamental layer where dimension, geometry, and physics emerge from abstract graph rewrite rules. See [HYPERGRAPH_FOUNDATION.md](HYPERGRAPH_FOUNDATION.md) for details.
+
 ---
 
 ## 🎯 Featured Examples
+
+### 0. 🔷 Dimensional Emergence from Pure Hypergraphs
+**File**: [examples/dimensional_emergence.rs](examples/dimensional_emergence.rs)
+
+**Physics**: The most fundamental layer - dimension emerges from abstract graph connectivity
+- No coordinates, no embedding in space
+- Measure dimension from N(r) ~ r^d statistics
+- **Validated**: 1D chain → d=1.00, 2D lattice → d≈1.75, 3D lattice → d≈2.13
+- **Discovery**: Random graphs have d≈3, spatially varying dimension detectable
+
+```bash
+cargo run --example dimensional_emergence --release
+# Terminal output with dimensional measurements
+```
+
+**Key result**: Dimension is NOT fundamental - it emerges from graph structure. This validates Wolfram's hypothesis that space itself is emergent from discrete computation.
+
+**Read more**: [HYPERGRAPH_FOUNDATION.md](HYPERGRAPH_FOUNDATION.md) and [WOLFRAM_INSIGHTS.md](WOLFRAM_INSIGHTS.md)
+
+---
 
 ### 1. Curved Spacetime Gravitational Lensing
 **File**: [examples/curved_spacetime_lensing.rs](examples/curved_spacetime_lensing.rs)
