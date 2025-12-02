@@ -1,0 +1,254 @@
+warning: unused import: `NodeID`
+  --> src\physics\adaptive_automata.rs:11:46
+   |
+11 | use crate::physics::hypergraph::{Hypergraph, NodeID};
+   |                                              ^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `std::collections::HashSet`
+  --> src\physics\simple_rules.rs:17:5
+   |
+17 | use std::collections::HashSet;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `GraphEmbedding` and `Hypergraph`
+  --> src\physics\em_emergence_tests.rs:17:22
+   |
+17 | use crate::physics::{Hypergraph, GraphEmbedding, AdaptiveAutomata};
+   |                      ^^^^^^^^^^  ^^^^^^^^^^^^^^
+   |
+help: if this is a test module, consider adding a `#[cfg(test)]` to the containing module
+  --> src\physics\mod.rs:17:1
+   |
+17 | pub mod em_emergence_tests;
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `std::collections::HashMap`
+  --> src\physics\dimensional_dynamics.rs:14:5
+   |
+14 | use std::collections::HashMap;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `glam::Vec3`
+ --> src\visualization\slice2d.rs:6:5
+  |
+6 | use glam::Vec3;
+  |     ^^^^^^^^^^
+
+warning: unused import: `glam::Vec3`
+  --> src\visualization\dimensional_slice.rs:14:5
+   |
+14 | use glam::Vec3;
+   |     ^^^^^^^^^^
+
+warning: unused import: `Hypergraph`
+ --> src\visualization\video_renderer.rs:9:22
+  |
+9 | use crate::physics::{Hypergraph, MultiwayGraph, GraphEmbedding};
+  |                      ^^^^^^^^^^
+
+warning: unused variable: `dt`
+   --> src\physics\experimental_tests.rs:228:13
+    |
+228 |         let dt = (t1 - t0) / steps as f32;
+    |             ^^
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+help: if this is intentional, prefix it with an underscore
+    |
+228 |         let _dt = (t1 - t0) / steps as f32;
+    |             +
+help: you might have meant to pattern match on the similarly named constant `C`
+    |
+228 -         let dt = (t1 - t0) / steps as f32;
+228 +         let simulation::spacetime_network::SpacetimeNetwork::add_nonlocal_edge::C = (t1 - t0) / steps as f32;
+    |
+
+warning: unused variable: `dim_tolerance`
+   --> src\physics\graph_optimization.rs:241:9
+    |
+241 |     let dim_tolerance = 0.1;
+    |         ^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_dim_tolerance`
+
+warning: unused variable: `graph`
+   --> src\physics\graph_optimization.rs:315:5
+    |
+315 |     graph: &Hypergraph,
+    |     ^^^^^ help: if this is intentional, prefix it with an underscore: `_graph`
+
+warning: variable `count` is assigned to, but never used
+   --> src\physics\dimensional_dynamics.rs:101:17
+    |
+101 |         let mut count = 0;
+    |                 ^^^^^
+    |
+    = note: consider using `_count` instead
+
+warning: value assigned to `count` is never read
+   --> src\physics\dimensional_dynamics.rs:136:13
+    |
+136 |             count += 1;
+    |             ^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `pos`
+   --> src\physics\dimensional_dynamics.rs:264:13
+    |
+264 |         let pos = self.cell_position(idx);
+    |             ^^^ help: if this is intentional, prefix it with an underscore: `_pos`
+
+warning: unused variable: `f_center`
+  --> src\utils\math.rs:31:9
+   |
+31 |     let f_center = field[idx];
+   |         ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_f_center`
+
+warning: unused variable: `idx`
+  --> src\utils\math.rs:62:9
+   |
+62 |     let idx = i + nx * (j + ny * k);
+   |         ^^^ help: if this is intentional, prefix it with an underscore: `_idx`
+
+warning: `em-physics-sandbox` (lib) generated 15 warnings (run `cargo fix --lib -p em-physics-sandbox` to apply 8 suggestions)
+   Compiling em-physics-sandbox v0.1.0 (C:\Users\mrcgo\Desktop\prog\python\physics\electrosim)
+warning: unused variable: `step`
+   --> examples\test_longitudinal_waves.rs:212:9
+    |
+212 |     for step in 0..steps {
+    |         ^^^^ help: if this is intentional, prefix it with an underscore: `_step`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: `em-physics-sandbox` (example "test_longitudinal_waves") generated 1 warning
+    Finished `release` profile [optimized] target(s) in 5.22s
+     Running `target\release\examples\test_longitudinal_waves.exe`
+
+=== LONGITUDINAL WAVE TEST ===
+
+Testing for scalar/longitudinal waves beyond standard Maxwell EM...
+
+Grid: 80x80x80, spacing = 0.5
+Total cells: 512000
+
+=== TEST 1: Monopole Source ===
+Oscillating point defect → expect BOTH longitudinal & transverse
+
+Source position: (20.0, 20.0, 20.0)
+Frequency: 0.1 Hz
+Amplitude: 0.5
+
+Detector positions:
+  Detector 1: r = 10.0
+  Detector 2: r = 20.0
+  Detector 3: r = 30.0
+
+Simulating 2000 steps (t = 0 to 100)
+Time step dt = 0.05
+
+  Step 0/2000 (t = 0.1)
+  Step 200/2000 (t = 10.1)
+  Step 400/2000 (t = 20.0)
+  Step 600/2000 (t = 30.0)
+  Step 800/2000 (t = 40.0)
+  Step 1000/2000 (t = 50.0)
+  Step 1200/2000 (t = 60.0)
+  Step 1400/2000 (t = 70.0)
+  Step 1600/2000 (t = 80.1)
+  Step 1800/2000 (t = 90.1)
+
+Simulation complete!
+
+=== WAVE COMPONENT ANALYSIS ===
+
+Detector 1 (r = 10.0):
+  Longitudinal magnitude: 0.000000
+  Transverse magnitude:   0.000000
+  Longitudinal fraction:  0.0%
+  → Primarily transverse (standard EM)
+
+Detector 2 (r = 20.0):
+  Longitudinal magnitude: 0.000000
+  Transverse magnitude:   0.000000
+  Longitudinal fraction:  0.0%
+  → Primarily transverse (standard EM)
+
+Detector 3 (r = 30.0):
+  Longitudinal magnitude: 0.000000
+  Transverse magnitude:   0.000000
+  Longitudinal fraction:  0.0%
+  → Primarily transverse (standard EM)
+
+Saving time series data to monopole_waves.csv...
+Data saved!
+
+
+=== TEST 2: Dipole Source ===
+Oscillating dipole → expect primarily TRANSVERSE (standard EM)
+
+Dipole separation: (2.0, 0.0, 0.0)
+Frequency: 0.1 Hz
+
+Detectors:
+  Axial (along dipole): (40.0, 20.0, 20.0)
+  Perpendicular: (20.0, 40.0, 20.0)
+
+Wave components:
+
+Axial detector:
+  Longitudinal fraction: 0.0%
+  (Along dipole axis - expect mixed)
+
+Perpendicular detector:
+  Longitudinal fraction: 0.0%
+  (Perpendicular to dipole - expect transverse)
+
+
+=== TEST 3: Weber Force Law ===
+Testing velocity-dependent force terms
+
+Charges: q1 = 1, q2 = 1
+Separation: r = 5.0
+
+Force vs. relative velocity:
+(Weber predicts velocity-dependent correction)
+
+  v/c = 0.0: F/F_coulomb = 1.0000 (Weber predicts: 1.0000)
+  v/c = 0.1: F/F_coulomb = 0.9950 (Weber predicts: 0.9950)
+  v/c = 0.3: F/F_coulomb = 0.9550 (Weber predicts: 0.9550)
+  v/c = 0.5: F/F_coulomb = 0.8750 (Weber predicts: 0.8750)
+  v/c = 0.7: F/F_coulomb = 0.7550 (Weber predicts: 0.7550)
+  v/c = 0.9: F/F_coulomb = 0.5950 (Weber predicts: 0.5950)
+
+Expected: F = F_coulomb * (1 - v²/2c²) for radial motion
+If ratio matches prediction → Weber force confirmed!
+
+
+=== SUMMARY ===
+
+Key Questions:
+1. Do monopoles produce longitudinal waves? (Lost in Heaviside)
+2. Do dipoles produce primarily transverse? (Standard EM)
+3. Do we see Weber velocity terms? (Action-at-distance vs field)
+
+Results:
+  ⚠ Longitudinal waves weak or absent
+    → May need different source or longer evolution
+
+  Dipole analysis:
+    Perpendicular: 0.0% longitudinal
+    ✓ Primarily transverse (as expected)
+
+Conclusion:
+⚠ PARTIAL: Need more investigation
+  - Longer simulation time?
+  - Different source configuration?
+  - Higher amplitude?
+
+Next steps:
+  - Generate video visualization of wave propagation
+  - Measure c_L / c_T ratio
+  - Test near-field vs far-field behavior
+  - Verify Aharonov-Bohm effect from dimensional potentials

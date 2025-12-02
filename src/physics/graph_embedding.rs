@@ -226,6 +226,7 @@ impl GraphEmbedding {
             ny,
             nz,
             spacing,
+            background_dimension: 3.0,
             avg_dimension: 0.0,
             min_dimension: 0.0,
             max_dimension: 0.0,

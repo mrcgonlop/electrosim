@@ -18,7 +18,15 @@
       "Bash(tasklist:*)",
       "Bash(findstr:*)",
       "Bash(timeout:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(tee:*)",
+      "Bash(python analyze_longitudinal_power.py:*)",
+      "Bash(python analyze_integrated_harvester.py:*)",
+      "Bash(python visualize_devices.py:*)",
+      "Bash(python animate_physics.py:*)",
+      "Bash(python -c:*)",
+      "Bash(python visualize_ball_lightning_fields.py:*)",
+      "Bash($env:PYTHONIOENCODING='utf-8')"
     ],
     "deny": [],
     "ask": []

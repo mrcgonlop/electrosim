@@ -282,6 +282,11 @@ impl Hypergraph {
         neighbors
     }
 
+    /// Get degree of a node (number of neighbors)
+    pub fn degree(&self, node: NodeID) -> usize {
+        self.neighbors(node).len()
+    }
+
     /// Check if edge exists between given nodes
     pub fn has_edge(&self, nodes: &[NodeID]) -> bool {
         for edge in &self.edges {

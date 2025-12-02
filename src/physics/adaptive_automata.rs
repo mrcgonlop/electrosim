@@ -108,6 +108,9 @@ pub struct AdaptiveAutomata {
     /// Spatial resolution
     pub spacing: f32,
 
+    /// Background dimension (typically 3.0)
+    pub background_dimension: f32,
+
     /// Dimensional field statistics
     pub avg_dimension: f32,
     pub min_dimension: f32,
@@ -156,6 +159,7 @@ impl AdaptiveAutomata {
             ny,
             nz,
             spacing,
+            background_dimension: 3.0,
             avg_dimension: 0.0,
             min_dimension: 0.0,
             max_dimension: 0.0,
@@ -191,6 +195,7 @@ impl AdaptiveAutomata {
             ny,
             nz,
             spacing,
+            background_dimension: dimension,
             avg_dimension: dimension,
             min_dimension: dimension,
             max_dimension: dimension,
@@ -343,6 +348,184 @@ impl AdaptiveAutomata {
         self.set_dimension_sphere(center, radius, 4.0);
     }
 
+    /// Create particle defect with smooth exponential falloff
+    /// This creates much stronger and more realistic dimensional gradients!
+    ///
+    /// charge: dimensional "charge" (positive = lower dimension, negative = higher)
+    /// lambda: characteristic length scale (decay length)
+    pub fn create_particle_defect_smooth(&mut self, position: Vec3, charge: f32, lambda: f32) {
+        for cell in &mut self.cells {
+            let r = (cell.position - position).length();
+            // Exponential falloff: d(r) = d_background - charge * exp(-r/λ)
+            let delta = charge * (-r / lambda).exp();
+            cell.dimension = (self.background_dimension - delta).max(0.0).min(5.0);
+        }
+
+        self.update_neighbors();
+        self.update_statistics();
+    }
+
+    /// Create particle defect with 1/r power law falloff
+    /// This should naturally give F ∝ 1/r² for dimensional gradient force!
+    ///
+    /// charge: dimensional "charge" strength
+    /// r0: core radius (prevents singularity at r=0)
+    pub fn create_particle_defect_coulomb(&mut self, position: Vec3, charge: f32, r0: f32) {
+        for cell in &mut self.cells {
+            let r = (cell.position - position).length();
+            // Power law falloff: d(r) = d_background - charge / (r + r0)
+            // Gradient of this: ∇d ∝ 1/r² → Force ∝ 1/r²!
+            let delta = charge / (r + r0);
+            cell.dimension = (self.background_dimension - delta).max(0.0).min(5.0);
+        }
+
+        self.update_neighbors();
+        self.update_statistics();
+    }
+
+    /// Create string defect with smooth exponential falloff
+    pub fn create_string_defect_smooth(&mut self, start: Vec3, end: Vec3, charge: f32, lambda: f32) {
+        let direction = (end - start).normalize();
+        let length = (end - start).length();
+
+        for cell in &mut self.cells {
+            // Distance to line segment
+            let to_point = cell.position - start;
+            let projection = to_point.dot(direction).clamp(0.0, length);
+            let point_on_line = start + direction * projection;
+            let r = (cell.position - point_on_line).length();
+
+            // Exponential falloff from line
+            let delta = charge * (-r / lambda).exp();
+            cell.dimension = (self.background_dimension - delta).max(0.0).min(5.0);
+        }
+
+        self.update_neighbors();
+        self.update_statistics();
+    }
+
+    /// Create string defect with 1/r power law falloff from line (Coulomb-like)
+    /// This should give B ∝ I/r for magnetic field from current!
+    ///
+    /// Represents a current-carrying wire:
+    /// - String defect = current (1D dimensional structure)
+    /// - Dimensional circulation around wire = magnetic field
+    /// - Should satisfy Ampère's Law: ∮B·dl ∝ I
+    ///
+    /// KEY INSIGHT: We store a "magnetic_field" vector in each cell that represents
+    /// the dimensional twist/circulation. This is B = (I/(2πr)) * φ_hat (azimuthal direction).
+    ///
+    /// charge: dimensional "current" strength
+    /// r0: core radius (prevents singularity at r=0)
+    pub fn create_string_defect_coulomb(&mut self, start: Vec3, end: Vec3, charge: f32, r0: f32) {
+        let wire_direction = (end - start).normalize();
+        let length = (end - start).length();
+
+        for cell in &mut self.cells {
+            // Distance to line segment
+            let to_point = cell.position - start;
+            let projection = to_point.dot(wire_direction).clamp(0.0, length);
+            let point_on_line = start + wire_direction * projection;
+            let radial_vec = cell.position - point_on_line;
+            let r = radial_vec.length();
+
+            // Lower dimension near the wire (1D string defect)
+            let delta = charge / (r + r0);
+            cell.dimension = (self.background_dimension - delta).max(0.0).min(5.0);
+
+            // Magnetic field in azimuthal direction: B = (charge / (2π(r + r0))) * φ_hat
+            // φ_hat = wire_direction × r_hat (right-hand rule)
+            if r > 1e-6 {
+                let r_hat = radial_vec.normalize();
+                let phi_hat = wire_direction.cross(r_hat).normalize();
+                let b_magnitude = charge / (2.0 * std::f32::consts::PI * (r + r0));
+                let b_field = phi_hat * b_magnitude;
+
+                // Store in cell's vector fields
+                cell.vectors.insert("magnetic_field".to_string(), b_field);
+            } else {
+                // At the wire center, field is undefined (or zero)
+                cell.vectors.insert("magnetic_field".to_string(), Vec3::ZERO);
+            }
+        }
+
+        self.update_neighbors();
+        self.update_statistics();
+    }
+
+    /// Measure dimensional circulation around a closed path
+    /// This is the magnetic field analogue: ∮B·dl
+    ///
+    /// For a circular path around a wire, this should give:
+    /// Circulation ∝ current (Ampère's Law)
+    pub fn measure_circulation(&self, center: Vec3, radius: f32, normal: Vec3) -> f32 {
+        let normal = normal.normalize();
+
+        // Choose two perpendicular vectors in the plane
+        let tangent1 = if normal.x.abs() < 0.9 {
+            normal.cross(Vec3::X).normalize()
+        } else {
+            normal.cross(Vec3::Y).normalize()
+        };
+        let tangent2 = normal.cross(tangent1).normalize();
+
+        let mut circulation = 0.0;
+        let num_samples = 64;
+
+        for i in 0..num_samples {
+            let theta = (i as f32) * 2.0 * std::f32::consts::PI / (num_samples as f32);
+            let next_theta = ((i + 1) as f32) * 2.0 * std::f32::consts::PI / (num_samples as f32);
+
+            // Points on circle
+            let p1 = center + tangent1 * (theta.cos() * radius) + tangent2 * (theta.sin() * radius);
+            let p2 = center + tangent1 * (next_theta.cos() * radius) + tangent2 * (next_theta.sin() * radius);
+
+            // Path segment
+            let segment = p2 - p1;
+            let segment_dir = segment.normalize();
+            let segment_length = segment.length();
+
+            // Magnetic field at midpoint (from stored vector field)
+            let midpoint = (p1 + p2) * 0.5;
+            let b_field = self.magnetic_field_at(midpoint);
+
+            // Line integral: ∮B·dl
+            circulation += b_field.dot(segment_dir) * segment_length;
+        }
+
+        circulation
+    }
+
+    /// Get magnetic field at arbitrary position (interpolated from grid)
+    pub fn magnetic_field_at(&self, pos: Vec3) -> Vec3 {
+        // Find nearest cell
+        let i = ((pos.x / self.spacing).floor() as usize).min(self.nx - 1);
+        let j = ((pos.y / self.spacing).floor() as usize).min(self.ny - 1);
+        let k = ((pos.z / self.spacing).floor() as usize).min(self.nz - 1);
+
+        let idx = self.cell_index(i, j, k);
+        if idx < self.cells.len() {
+            self.cells[idx].vectors.get("magnetic_field").copied().unwrap_or(Vec3::ZERO)
+        } else {
+            Vec3::ZERO
+        }
+    }
+
+    /// Get electric field at arbitrary position (interpolated from grid)
+    pub fn electric_field_at(&self, pos: Vec3) -> Vec3 {
+        // Find nearest cell
+        let i = ((pos.x / self.spacing).floor() as usize).min(self.nx - 1);
+        let j = ((pos.y / self.spacing).floor() as usize).min(self.ny - 1);
+        let k = ((pos.z / self.spacing).floor() as usize).min(self.nz - 1);
+
+        let idx = self.cell_index(i, j, k);
+        if idx < self.cells.len() {
+            self.cells[idx].vectors.get("electric_field").copied().unwrap_or(Vec3::ZERO)
+        } else {
+            Vec3::ZERO
+        }
+    }
+
     /// Get dimensional gradient (for force calculations)
     pub fn dimensional_gradient(&self, idx: usize) -> Vec3 {
         let cell = &self.cells[idx];
@@ -369,6 +552,36 @@ impl AdaptiveAutomata {
     pub fn dimensional_force(&self, idx: usize) -> Vec3 {
         let grad = self.dimensional_gradient(idx);
         -grad  // Force opposes gradient (toward lower dimension)
+    }
+
+    /// Get dimension at arbitrary position (interpolated from grid)
+    pub fn dimension_at(&self, pos: Vec3) -> f32 {
+        // Find grid cell containing this position
+        let i = ((pos.x / self.spacing).floor() as usize).min(self.nx - 1);
+        let j = ((pos.y / self.spacing).floor() as usize).min(self.ny - 1);
+        let k = ((pos.z / self.spacing).floor() as usize).min(self.nz - 1);
+
+        let idx = self.cell_index(i, j, k);
+        if idx < self.cells.len() {
+            self.cells[idx].dimension
+        } else {
+            self.background_dimension
+        }
+    }
+
+    /// Get dimensional gradient at arbitrary position
+    pub fn dimension_gradient_at(&self, pos: Vec3) -> Vec3 {
+        // Find nearest cell
+        let i = ((pos.x / self.spacing).floor() as usize).min(self.nx - 1);
+        let j = ((pos.y / self.spacing).floor() as usize).min(self.ny - 1);
+        let k = ((pos.z / self.spacing).floor() as usize).min(self.nz - 1);
+
+        let idx = self.cell_index(i, j, k);
+        if idx < self.cells.len() {
+            self.dimensional_gradient(idx)
+        } else {
+            Vec3::ZERO
+        }
     }
 }
 
